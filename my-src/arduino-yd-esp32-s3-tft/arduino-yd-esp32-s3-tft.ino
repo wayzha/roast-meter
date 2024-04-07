@@ -1,14 +1,14 @@
-// VERSION 1.0.1-beta
-#include <SFE_MicroOLED.h>
+// VERSION 1.0.1
+#include <Adafruit_GFX.h>    // Core graphics library
+#include <Adafruit_ST7789.h> // Hardware-specific library for ST7789
+#include <SPI.h>
+
 #include <Wire.h>
-
-#include "MAX30105.h"
-
-#define PIN_RESET 9
-#define DC_JUMPER 1
+#include <MAX30105.h>
 
 MAX30105 particleSensor;
-MicroOLED oled(PIN_RESET, DC_JUMPER);
+
+Adafruit_ST7789 tft = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
 
 long unblockedValue;  // Average IR at power up
 
@@ -21,29 +21,28 @@ String multiplyChar(char c, int n) {
 }
 
 void displayMeasurement(int rLevel) {
-  oled.clear(PAGE);
-  oled.setCursor(0, 0);
+  tft.fillScreen(ST77XX_BLACK);
+  tft.setCursor(0, 30);
 
   int calibratedReading = f(rLevel);
-  int centerPadding = 4 - String(calibratedReading).length();
-  String paddingText = multiplyChar(' ', centerPadding);
 
   if (rLevel == 0) {
-    oled.setFontType(1);
-    oled.print("Please load   sample!");
-    oled.display();
+    tft.setTextColor(ST77XX_RED);
+    tft.setTextSize(2);
+    tft.print("Please load sample!");
     return;
   }
 
-  oled.setFontType(3);
-  oled.print(paddingText);
-  oled.print(calibratedReading);
+  tft.setTextColor(ST77XX_BLUE);
+  tft.setTextSize(3);
+  tft.print("real: ");
+  tft.println(rLevel);
+  tft.print("agtron: ");
+  tft.println(calibratedReading);
 
   Serial.println("real:" + String(rLevel));
   Serial.println("agtron:" + String(calibratedReading));
   Serial.println("===========================");
-
-  oled.display();
 }
 
 int f(int x) {
@@ -55,14 +54,25 @@ int f(int x) {
 
 void setup() {
   Serial.begin(9600);
+  Serial.print(F("Start Loading App"));
 
   Wire.begin();
-  oled.begin();      // Initialize the OLED
-  oled.clear(ALL);   // Clear the display's internal memory
-  oled.clear(PAGE);  // Clear the buffer.
 
-  delay(100);  // Delay 100 ms
-  oled.setFontType(3);
+  // turn on backlite
+  pinMode(TFT_BACKLITE, OUTPUT);
+  digitalWrite(TFT_BACKLITE, HIGH);
+
+  // turn on the TFT / I2C power supply
+  pinMode(TFT_I2C_POWER, OUTPUT);
+  digitalWrite(TFT_I2C_POWER, HIGH);
+  delay(10);
+
+  // initialize TFT
+  tft.init(135, 240); // Init ST7789 240x135
+  tft.setRotation(3);
+  tft.fillScreen(ST77XX_BLACK);
+
+  Serial.println(F("TFT Initialized"));
 
   // Initialize sensor
   if (particleSensor.begin(Wire, I2C_SPEED_FAST) == false)  // Use default I2C port, 400kHz speed
