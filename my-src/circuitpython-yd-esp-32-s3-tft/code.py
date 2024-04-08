@@ -4,11 +4,75 @@ import board
 import busio
 from digitalio import DigitalInOut
 
-import adafruit_ssd1306
 import qwiic_max3010x
+
+import terminalio
+import displayio
+
+try:
+    from fourwire import FourWire
+except ImportError:
+    from displayio import FourWire
+
+from adafruit_display_text import label
+from adafruit_st7789 import ST7789
 
 
 def runExample():
+    # First set some parameters used for shapes and text
+    BORDER = 20
+    FONTSCALE = 2
+    BACKGROUND_COLOR = 0x00FF00  # Bright Green
+    FOREGROUND_COLOR = 0xAA0088  # Purple
+    TEXT_COLOR = 0xFFFF00
+    
+    # Release any resources currently in use for the displays
+    displayio.release_displays()
+
+    spi = board.SPI()
+    tft_cs = board.TFT_CS
+    tft_dc = board.TFT_DC
+
+    display_bus = FourWire(spi, command=tft_dc, chip_select=tft_cs)
+    display = ST7789(
+        display_bus, rotation=90, width=240, height=135, rowstart=40, colstart=53
+    )
+    
+    # Make the display context
+    splash = displayio.Group()
+    display.root_group = splash
+
+    color_bitmap = displayio.Bitmap(display.width, display.height, 1)
+    color_palette = displayio.Palette(1)
+    color_palette[0] = BACKGROUND_COLOR
+
+    bg_sprite = displayio.TileGrid(color_bitmap, pixel_shader=color_palette, x=0, y=0)
+    splash.append(bg_sprite)
+
+    # Draw a smaller inner rectangle
+    inner_bitmap = displayio.Bitmap(
+        display.width - BORDER * 2, display.height - BORDER * 2, 1
+    )
+    inner_palette = displayio.Palette(1)
+    inner_palette[0] = FOREGROUND_COLOR
+    inner_sprite = displayio.TileGrid(
+        inner_bitmap, pixel_shader=inner_palette, x=BORDER, y=BORDER
+    )
+    splash.append(inner_sprite)
+
+    # Draw a label
+    text = "Hello World!"
+    text_area = label.Label(terminalio.FONT, text=text, color=TEXT_COLOR)
+    text_width = text_area.bounding_box[2] * FONTSCALE
+    text_group = displayio.Group(
+        scale=FONTSCALE,
+        x=display.width // 2 - text_width // 2,
+        y=display.height // 2,
+    )
+    text_group.append(text_area)  # Subgroup for text scaling
+    splash.append(text_group)
+    
+    
     print("\nSparkFun MAX3010x Photodetector - Example 1\n")
     sensor = qwiic_max3010x.QwiicMax3010x()
 
@@ -40,19 +104,9 @@ def runExample():
         sensor.enableSlot(2, 0x02)
         print("Setup complete.")
 
-
-
     print("Create the I2C interface")
     #i2c = busio.I2C(board.SCL, board.SDA)
     i2c = board.I2C()
-
-    print("Create the SSD1306 OLED class")
-    # The first two parameters are the pixel width and pixel height.  Change these
-    # to the right size for your display!
-    # The I2C address for these displays is 0x3d or 0x3c, change to match
-    # A reset line may be required if there is no auto-reset circuitry
-    # , addr=0x3C
-    display = adafruit_ssd1306.SSD1306_I2C(128, 32, i2c)
 
     while True:
         rLevel = sensor.getIR()
@@ -63,12 +117,22 @@ def runExample():
             output = rLevel / 1000
 
         print(output)
-        display.fill(0)
-        display.text(str(output), 0, 0, 1)
-        display.show()
+        
+        # Draw a label
+        splash.remove(text_group)
+        text = str(output)
+        text_area = label.Label(terminalio.FONT, text=text, color=TEXT_COLOR)
+        text_width = text_area.bounding_box[2] * FONTSCALE
+        text_group = displayio.Group(
+            scale=FONTSCALE,
+            x=display.width // 2 - text_width // 2,
+            y=display.height // 2,
+        )
+        text_group.append(text_area)  # Subgroup for text scaling]
+        splash.append(text_group)
 
 
-        time.sleep(0.1)
+        time.sleep(0.2)
 
 if __name__ == '__main__':
     try:
