@@ -1,12 +1,9 @@
 import time
 import sys
-import board
-import busio
-from digitalio import DigitalInOut
+import machine
 
-import adafruit_ssd1306
 import qwiic_max3010x
-
+from ssd1306 import SSD1306_I2C
 
 def runExample():
     print("\nSparkFun MAX3010x Photodetector - Example 1\n")
@@ -43,16 +40,10 @@ def runExample():
 
 
     print("Create the I2C interface")
-    #i2c = busio.I2C(board.SCL, board.SDA)
-    i2c = board.I2C()
+    i2c = machine.I2C(sda=machine.Pin(23), scl=machine.Pin(22))
 
-    print("Create the SSD1306 OLED class")
-    # The first two parameters are the pixel width and pixel height.  Change these
-    # to the right size for your display!
-    # The I2C address for these displays is 0x3d or 0x3c, change to match
-    # A reset line may be required if there is no auto-reset circuitry
-    # , addr=0x3C
-    display = adafruit_ssd1306.SSD1306_I2C(128, 32, i2c)
+    print("Create the SSD1306_I2C class")
+    display = SSD1306_I2C(128, 32, i2c)
 
     while True:
         rLevel = sensor.getIR()
