@@ -40,7 +40,7 @@ def runExample():
 
 
     print("Create the I2C interface")
-    i2c = machine.I2C(sda=machine.Pin(23), scl=machine.Pin(22))
+    i2c = machine.I2C(sda=machine.Pin(8), scl=machine.Pin(9))
 
     print("Create the SSD1306_I2C class")
     display = SSD1306_I2C(128, 32, i2c)
